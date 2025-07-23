@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PubMed Pseudoscience Search</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    input { padding: 10px; width: 60%; }
+    button { padding: 10px; }
+    .result { margin-top: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+    .result h3 { margin: 0; }
+  </style>
+</head>
+<body>
+  <h1>PubMed Pseudoscience Search</h1>
+  <p>Search topics like "homeopathy", "astrology", "crystal healing", etc.</p>
+  <input type="text" id="searchTerm" placeholder="Enter search term..." />
+  <button onclick="searchPubMed()">Search</button>
+  <div id="results"></div>
+
+  <script>
+    const pseudoscienceKeywords = [
+      "homeopathy", "astrology", "crystal healing", "flat earth",
+      "anti-vaccine", "reiki", "quantum healing", "telepathy",
+      "chiropractic", "alternative medicine", "pseudoscience"
+    ];
+
+    async function searchPubMed() {
+      const query = document.getElementById('searchTerm').value.trim();
+      if (!query) return;
+
+      // Append pseudoscience keywords to search
+      const fullQuery = `${query} AND (${pseudoscienceKeywords.join(' OR ')})`;
+      const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&retmax=10&term=${encodeURIComponent(fullQuery)}`;
+
+      const res = await fetch(searchUrl);
+      const data = await res.json();
+      const idList = data.esearchresult.idlist;
+
+      if (idList.length === 0) {
+        document.getElementById('results').innerHTML = '<p>No results found.</p>';
+        return;
+      }
+
+      const fetchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&retmode=json&id=${idList.join(',')}`;
+      const summaryRes = await fetch(fetchUrl);
+      const summaryData = await summaryRes.json();
+
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '';
+
+      idList.forEach(id => {
+        const item = summaryData.result[id];
+        const div = document.createElement('div');
+        div.className = 'result';
+        div.innerHTML = `
+          <h3><a href="https://pubmed.ncbi.nlm.nih.gov/${id}/" target="_blank">${item.title}</a></h3>
+          <p>${item.source} (${item.pubdate})</p>
+        `;
+        resultsDiv.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>
